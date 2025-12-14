@@ -165,6 +165,7 @@ echo "::debug::EXTRA_ARGS: ${EXTRA_ARGS[*]}"
 
 ## Collect Stack Files
 STACK_FILES=()
+
 if [[ "${INPUT_MODE}" == "compose" ]];then
     read -r -a files <<< "${INPUT_FILE}"
     for file in "${files[@]}";do
@@ -172,7 +173,7 @@ if [[ "${INPUT_MODE}" == "compose" ]];then
     done
     echo "::debug::COMPOSE STACK_FILES: ${STACK_FILES[*]}"
 elif [[ "${INPUT_MODE}" == "swarm" ]];then
-    read -r -a files <<< "${INPUTE_FILE}"
+    read -r -a files <<< "${INPUT_FILE}"
     for file in "${files[@]}";do
         STACK_FILES+=("-c" "$file")
     done
