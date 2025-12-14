@@ -102,7 +102,7 @@ You can also view an [Action Comparison](https://docker-deploy.cssnr.com/guides/
 | Input&nbsp;Name      | Default&nbsp;Value                  | Short&nbsp;Description&nbsp;of&nbsp;the&nbsp;Input&nbsp;Value      |
 | :------------------- | :---------------------------------- | :----------------------------------------------------------------- |
 | `name`               | _Required_                          | Docker Stack/Project Name [⤵️](#name)                              |
-| `file`               | `docker-compose.yaml`               | Docker Stack/Compose File(s) [⤵️](#file)                           |
+| `file`               | `docker-compose.yaml`               | Docker Stack/Compose File(s) (supports multiple) [⤵️](#file)                           |
 | `mode`**¹**          | `swarm`                             | Deploy Mode [`swarm`, `compose`] [⤵️](#mode)                       |
 | `args`**¹**          | `--remove-orphans --force-recreate` | Additional **Compose** Arguments [⤵️](#args)                       |
 | `host`               | _Required_                          | Remote Docker Hostname or IP [⤵️](#host)                           |
@@ -126,18 +126,21 @@ You can also view an [Action Comparison](https://docker-deploy.cssnr.com/guides/
 > \* More details below...
 
 <details><summary>📟 Click Here to see how the deployment command is generated</summary>
-
 ```shell
 if [[ "${INPUT_MODE}" == "swarm" ]];then
     DEPLOY_TYPE="Swarm"
-    COMMAND=("docker" "stack" "deploy" "-c" "${INPUT_FILE}" "${EXTRA_ARGS[@]}" "${INPUT_NAME}")
+    COMMAND=("docker" "stack" "deploy" "${STACK_FILES[@]}" "${EXTRA_ARGS[@]}" "${INPUT_NAME}")
 else
     DEPLOY_TYPE="Compose"
     COMMAND=("docker" "compose" "${STACK_FILES[@]}" "-p" "${INPUT_NAME}" "up" "-d" "-y" "${EXTRA_ARGS[@]}")
 fi
 ```
 
-Compose Note: `"${STACK_FILES[@]}"` is an array of `-f docker-compose.yaml` for every `file` in the argument.
+**Note:** `"${STACK_FILES[@]}"` is an array of file paths with the appropriate flag prepended:
+- **Swarm mode:** `-c file1.yaml -c file2.yaml` for each file
+- **Compose mode:** `-f file1.yaml -f file2.yaml` for each file
+
+Files are processed in the order provided and merged, with later files overriding earlier ones.
 
 If you need more control over the deployment command or have a complex deployment,
 see the [Docker Context Action](https://github.com/cssnr/docker-context-action?tab=readme-ov-file#readme).
@@ -152,8 +155,13 @@ Stack name for Swarm and project name for Compose.
 
 #### file
 
-Stack file or Compose file(s). Multiple files can be provided, space seperated, and a `-f` will be prepended to each.
-Example: `web.yaml db.yaml`.
+Stack file or Compose file(s). Multiple files can be provided, space-separated, and a `-c` flag (for swarm) or `-f` flag (for compose) will be prepended to each file.
+
+**Examples:**
+- Single file: `docker-compose.yaml`
+- Multiple files: `base.yaml production.yaml`
+
+**Note:** Files are merged in order, with later files overriding earlier ones.
 
 #### mode
 
@@ -381,8 +389,27 @@ Additional [Examples](https://docker-deploy.cssnr.com/guides/examples) are avail
     args: --remove-orphans --force-recreate
 ```
 
+
 Note: these are the default arguments. If you use `args` this will override the default arguments unless they are included.
 You can disable them by passing an empty string. For more details, see the compose up [docs](https://docs.docker.com/reference/cli/docker/compose/up/).
+
+<details><summary>Multiple Compose Files (Swarm Mode)</summary>
+
+Deploy with a base configuration and environment-specific overrides:
+```yaml
+- name: 'Stack Deploy'
+  uses: cssnr/stack-deploy-action@v1
+  with:
+    name: 'my-stack'
+    file: 'docker-compose.base.yaml docker-compose.production.yaml'
+    host: ${{ secrets.DOCKER_HOST }}
+    user: ${{ secrets.DOCKER_USER }}
+    ssh_key: ${{ secrets.DOCKER_SSH_KEY }}
+```
+
+This will merge the files in order, with `docker-compose.production.yaml` overriding values from `docker-compose.base.yaml`.
+
+</details>
 
 </details>
 <details><summary>Compose with Private Image</summary>

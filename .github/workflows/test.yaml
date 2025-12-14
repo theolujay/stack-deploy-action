@@ -130,6 +130,48 @@ jobs:
           registry_user: ${{ vars.DOCKER_HUB_USER }}
           registry_pass: ${{ secrets.DOCKER_HUB_PASS }}
 
+      - name: "5: Write Base YAML"
+        if: ${{ !cancelled() }}
+        uses: teunmooij/yaml@v1
+        with:
+          to-file: "docker-compose.base.yaml"
+          data: |
+            {"version":"3.8","services":{"alpine":{"image":"alpine:latest","command":"tail -f /dev/null"}}}
+
+      - name: "5: Write Override YAML"
+        if: ${{ !cancelled() }}
+        uses: teunmooij/yaml@v1
+        with:
+          to-file: "docker-compose.override.yaml"
+          data: |
+            {"version":"3.8","services":{"alpine":{"environment":{"TEST":"multiple-files"}}}}
+
+      - name: "5: Test Multiple Files (Swarm)"
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          name: test_stack-deploy-multi
+          file: docker-compose.base.yaml docker-compose.override.yaml
+          host: ${{ secrets.DOCKER_HOST }}
+          port: ${{ secrets.DOCKER_PORT }}
+          user: ${{ secrets.DOCKER_USER }}
+          ssh_key: ${{ secrets.DOCKER_SSH_KEY }}
+          detach: false
+          resolve_image: "changed"
+
+      - name: "6: Test Multiple Files (Compose)"
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          name: test_stack-deploy-compose-multi
+          file: docker-compose.base.yaml docker-compose.override.yaml
+          host: ${{ secrets.DOCKER_HOST }}
+          port: ${{ secrets.DOCKER_PORT }}
+          user: ${{ secrets.DOCKER_USER }}
+          ssh_key: ${{ secrets.DOCKER_SSH_KEY }}
+          mode: compose
+          summary: false
+
       - name: "Schedule Failure Notification"
         if: ${{ failure() && github.event_name == 'schedule' }}
         uses: sarisia/actions-status-discord@v1
