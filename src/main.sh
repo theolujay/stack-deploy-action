@@ -164,21 +164,27 @@ fi
 echo "::debug::EXTRA_ARGS: ${EXTRA_ARGS[*]}"
 
 ## Collect Stack Files
+STACK_FILES=()
 
 if [[ "${INPUT_MODE}" == "compose" ]];then
-    STACK_FILES=()
     read -r -a files <<< "${INPUT_FILE}"
     for file in "${files[@]}";do
         STACK_FILES+=("-f" "$file")
     done
-    echo "::debug::STACK_FILES: ${STACK_FILES[*]}"
+    echo "::debug::COMPOSE STACK_FILES: ${STACK_FILES[*]}"
+elif [[ "${INPUT_MODE}" == "swarm" ]];then
+    read -r -a files <<< "${INPUT_FILE}"
+    for file in "${files[@]}";do
+        STACK_FILES+=("-c" "$file")
+    done
+    echo "::debug::SWARM STACK_FILES: ${STACK_FILES[*]}"
 fi
 
 ## Deploy Stack
 
 if [[ "${INPUT_MODE}" == "swarm" ]];then
     DEPLOY_TYPE="Swarm"
-    COMMAND=("docker" "stack" "deploy" "-c" "${INPUT_FILE}" "${EXTRA_ARGS[@]}" "${INPUT_NAME}")
+    COMMAND=("docker" "stack" "deploy" "${STACK_FILES[@]}" "${EXTRA_ARGS[@]}" "${INPUT_NAME}")
 else
     DEPLOY_TYPE="Compose"
     COMMAND=("docker" "compose" "${STACK_FILES[@]}" "-p" "${INPUT_NAME}" "up" "-d" "-y" "${EXTRA_ARGS[@]}")
